@@ -27,8 +27,20 @@ Set a strong JWT signing secret before starting the backend. The admin seed is o
 
 ```powershell
 cd backend
+$java = (Get-Command java -ErrorAction Stop).Source
+$javaVersion = (& $java -version 2>&1 | Out-String)
+if ($javaVersion -notmatch 'version "17\.') {
+    throw "Java 17 is required. Install it and put its bin directory first on PATH."
+}
+$env:JAVA_HOME = Split-Path (Split-Path $java -Parent) -Parent
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
 $bytes = New-Object byte[] 48
-[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+try {
+    $rng.GetBytes($bytes)
+} finally {
+    $rng.Dispose()
+}
 $env:JWT_SECRET = [Convert]::ToBase64String($bytes)
 $adminPassword = Read-Host "Choose the local admin password" -AsSecureString
 $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($adminPassword)
@@ -37,7 +49,7 @@ try {
 } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
 }
-mvn spring-boot:run
+mvn "-Duser.home=$env:USERPROFILE" "-Dmaven.repo.local=$env:USERPROFILE\.m2\repository" spring-boot:run
 ```
 
 The API listens at `http://localhost:8081/api`.
