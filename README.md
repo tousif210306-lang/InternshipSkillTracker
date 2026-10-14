@@ -57,7 +57,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. To point the frontend at a different API URL, set `VITE_API_BASE_URL` in the frontend environment.
+Open `http://localhost:5174`. To point the frontend at a different API URL, set `VITE_API_BASE_URL` in the frontend environment.
 
 If `SKILLTRACKER_ADMIN_PASSWORD` is set when the database is first created, the backend seeds `admin@skilltracker.com` with that password. No default admin password or JWT signing secret is embedded in the project. Keep both values private and do not commit them.
 
