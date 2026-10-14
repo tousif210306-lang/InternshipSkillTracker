@@ -1,31 +1,26 @@
 CREATE DATABASE IF NOT EXISTS internship_skill_tracker;
 USE internship_skill_tracker;
 
-CREATE TABLE departments (
+-- Run this file from top to bottom in the selected database. The IF NOT EXISTS
+-- clauses allow a retry after a partial run; they do not alter existing tables.
+CREATE TABLE IF NOT EXISTS departments (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     code VARCHAR(32) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL UNIQUE,
     active BOOLEAN NOT NULL DEFAULT TRUE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE career_roles (
+CREATE TABLE IF NOT EXISTS career_roles (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(120) NOT NULL UNIQUE,
     description VARCHAR(1000) NOT NULL,
     department_id BIGINT NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
+    KEY idx_career_roles_department_id (department_id),
     CONSTRAINT fk_career_roles_department FOREIGN KEY (department_id) REFERENCES departments(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE career_role_skill_previews (
-    career_role_id BIGINT NOT NULL,
-    display_order INT NOT NULL,
-    skill_name VARCHAR(100) NOT NULL,
-    PRIMARY KEY (career_role_id, display_order),
-    CONSTRAINT fk_role_skill_previews_role FOREIGN KEY (career_role_id) REFERENCES career_roles(id) ON DELETE CASCADE
-);
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -36,7 +31,7 @@ CREATE TABLE users (
     degree VARCHAR(255),
     graduation_year INT,
     location VARCHAR(255),
-    bio TEXT,
+    bio VARCHAR(1000),
     linkedin_url VARCHAR(255),
     github_url VARCHAR(255),
     career_objective VARCHAR(1000),
@@ -46,10 +41,19 @@ CREATE TABLE users (
     career_role_id BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_users_career_role_id (career_role_id),
     CONSTRAINT fk_users_career_role FOREIGN KEY (career_role_id) REFERENCES career_roles(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE skills (
+CREATE TABLE IF NOT EXISTS career_role_skill_previews (
+    career_role_id BIGINT NOT NULL,
+    display_order INT NOT NULL,
+    skill_name VARCHAR(100) NOT NULL,
+    PRIMARY KEY (career_role_id, display_order),
+    CONSTRAINT fk_role_skill_previews_role FOREIGN KEY (career_role_id) REFERENCES career_roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS skills (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -58,14 +62,15 @@ CREATE TABLE skills (
     years_of_experience DOUBLE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_skills_user_id (user_id),
     CONSTRAINT fk_skills_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description VARCHAR(2000),
     technologies VARCHAR(1000),
     status VARCHAR(50) NOT NULL,
     github_url VARCHAR(255),
@@ -74,23 +79,25 @@ CREATE TABLE projects (
     end_date DATE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_projects_user_id (user_id),
     CONSTRAINT fk_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE companies (
+CREATE TABLE IF NOT EXISTS companies (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     location VARCHAR(255),
     industry VARCHAR(255),
     website VARCHAR(255),
-    description TEXT,
+    description VARCHAR(2000),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_companies_user_id (user_id),
     CONSTRAINT fk_companies_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE internship_applications (
+CREATE TABLE IF NOT EXISTS internship_applications (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     company_id BIGINT NOT NULL,
@@ -100,48 +107,53 @@ CREATE TABLE internship_applications (
     interview_date DATE,
     status VARCHAR(50) NOT NULL,
     application_url VARCHAR(255),
-    notes TEXT,
+    notes VARCHAR(2000),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_applications_user_id (user_id),
+    KEY idx_applications_company_id (company_id),
     CONSTRAINT fk_applications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_applications_company FOREIGN KEY (company_id) REFERENCES companies(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE learning_goals (
+CREATE TABLE IF NOT EXISTS learning_goals (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description VARCHAR(2000),
     target_date DATE,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_learning_goals_user_id (user_id),
     CONSTRAINT fk_goals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description VARCHAR(2000),
     due_date DATE,
     priority VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_tasks_user_id (user_id),
     CONSTRAINT fk_tasks_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
+    message VARCHAR(2000),
     type VARCHAR(50) NOT NULL DEFAULT 'INFO',
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_notifications_user_id (user_id),
     CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Admin seeding is opt-in through SKILLTRACKER_ADMIN_PASSWORD; do not insert
 -- plaintext passwords into this schema.
