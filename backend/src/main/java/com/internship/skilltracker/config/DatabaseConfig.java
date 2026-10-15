@@ -32,7 +32,12 @@ public class DatabaseConfig {
     @Primary
     public DataSource dataSource() {
         ParsedDbConfig config = parse(rawUrl, rawUsername, rawPassword);
-        logger.info("Initializing Production DataSource for JDBC URL: {}", maskUrl(config.jdbcUrl));
+        logger.info("Initializing Production DataSource for user: '{}' (pass length: {}), JDBC URL: {}",
+                config.username, config.password != null ? config.password.length() : 0, maskUrl(config.jdbcUrl));
+
+        if (config.password == null || config.password.isBlank()) {
+            logger.warn("CRITICAL: Database password is EMPTY. Set DB_PASSWORD in Render or provide it in the Service URI.");
+        }
 
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(config.jdbcUrl);
@@ -56,8 +61,8 @@ public class DatabaseConfig {
         String fallbackUser = "avnadmin";
 
         if (rawUrl == null || rawUrl.isBlank()) {
-            String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser : fallbackUser;
-            String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword : "";
+            String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser.trim() : fallbackUser;
+            String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword.trim() : "";
             String jdbcUrl = "jdbc:mysql://" + defaultAivenHost + ":" + defaultAivenPort + "/" + defaultAivenDb
                     + "?sslMode=REQUIRED&allowPublicKeyRetrieval=true";
             return new ParsedDbConfig(jdbcUrl, user, pass);
@@ -68,8 +73,9 @@ public class DatabaseConfig {
         if (trimmed.startsWith("mysql://")) {
             try {
                 URI uri = new URI(trimmed.replace("mysql://", "http://"));
-                String user = defaultUser;
-                String pass = defaultPassword;
+                String user = null;
+                String pass = null;
+
                 if (uri.getUserInfo() != null && !uri.getUserInfo().isBlank()) {
                     String[] parts = uri.getUserInfo().split(":", 2);
                     user = parts[0];
@@ -77,8 +83,12 @@ public class DatabaseConfig {
                         pass = parts[1];
                     }
                 }
-                if (user == null || user.isBlank()) user = fallbackUser;
-                if (pass == null) pass = "";
+                if (user == null || user.isBlank()) {
+                    user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser.trim() : fallbackUser;
+                }
+                if (pass == null || pass.isBlank()) {
+                    pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword.trim() : "";
+                }
 
                 String host = uri.getHost() != null ? uri.getHost() : defaultAivenHost;
                 int port = uri.getPort() > 0 ? uri.getPort() : defaultAivenPort;
@@ -111,14 +121,14 @@ public class DatabaseConfig {
             if (!jdbcUrl.contains("allowPublicKeyRetrieval")) {
                 jdbcUrl += "&allowPublicKeyRetrieval=true";
             }
-            String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser : fallbackUser;
-            String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword : "";
+            String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser.trim() : fallbackUser;
+            String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword.trim() : "";
             return new ParsedDbConfig(jdbcUrl, user, pass);
         }
 
         // Fallback
-        String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser : fallbackUser;
-        String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword : "";
+        String user = (defaultUser != null && !defaultUser.isBlank()) ? defaultUser.trim() : fallbackUser;
+        String pass = (defaultPassword != null && !defaultPassword.isBlank()) ? defaultPassword.trim() : "";
         return new ParsedDbConfig(trimmed, user, pass);
     }
 
