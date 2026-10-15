@@ -151,7 +151,7 @@ function DashboardShell({ user, onUserUpdated, onLogout }) {
           <Route path="/goals" element={<GoalsPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage user={user} onUserUpdated={onUserUpdated} />} />
           <Route path="/progress" element={<ProgressPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/admin" element={user.role === 'ADMIN' ? <AdminPage /> : <Navigate to="/" replace />} />
@@ -349,10 +349,10 @@ function DashboardPage({ user, searchQuery }) {
   }, [goals, query]);
 
   const summaryCards = [
-    { label: 'Total Skills', value: filteredSkills.length || dashboard.totalSkills || 0, subtitle: 'Tracked abilities', icon: '💻', color: '#5b8def' },
-    { label: 'Total Projects', value: filteredProjects.length || dashboard.totalProjects || 0, subtitle: 'Portfolio builds', icon: '🚀', color: '#00b5a2' },
-    { label: 'Internship Applications', value: filteredApplications.length || dashboard.totalApplications || 0, subtitle: 'Active pipeline', icon: '🏢', color: '#ff9a3d' },
-    { label: 'Learning Goals', value: filteredGoals.length || dashboard.totalGoals || 0, subtitle: 'Career milestones', icon: '🎯', color: '#8d5cf6' },
+    { label: 'Total Skills', value: query ? filteredSkills.length : dashboard.totalSkills, subtitle: 'Tracked abilities', icon: '💻', color: '#5b8def' },
+    { label: 'Total Projects', value: query ? filteredProjects.length : dashboard.totalProjects, subtitle: 'Portfolio builds', icon: '🚀', color: '#00b5a2' },
+    { label: 'Internship Applications', value: query ? filteredApplications.length : dashboard.totalApplications, subtitle: 'Active pipeline', icon: '🏢', color: '#ff9a3d' },
+    { label: 'Learning Goals', value: query ? filteredGoals.length : dashboard.totalGoals, subtitle: 'Career milestones', icon: '🎯', color: '#8d5cf6' },
   ];
 
   const proficiencyValue = { BEGINNER: 35, INTERMEDIATE: 60, ADVANCED: 80, EXPERT: 95 };
@@ -480,11 +480,18 @@ function DashboardPage({ user, searchQuery }) {
                     </div>
                     <span className={`status-badge ${String(project.status).toLowerCase()}`}>{project.status}</span>
                   </div>
-                  <div className="mini-card-footer">
-                    <button type="button" className="ghost-btn" onClick={() => window.open(project.liveDemoUrl || project.githubUrl || '#', '_blank', 'noopener,noreferrer')}>
-                      View
-                    </button>
-                  </div>
+                  {(project.liveDemoUrl || project.githubUrl) && (
+                    <div className="mini-card-footer">
+                      <a
+                        className="ghost-btn"
+                        href={project.liveDemoUrl || project.githubUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View project
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -789,7 +796,7 @@ function NotificationsPage() {
   );
 }
 
-function ProfilePage() {
+function ProfilePage({ user, onUserUpdated }) {
   const [form, setForm] = useState({
     name: '', phoneNumber: '', university: '', degree: '', graduationYear: '', location: '',
     bio: '', linkedinUrl: '', githubUrl: '', careerObjective: '', certifications: '',
@@ -797,6 +804,7 @@ function ProfilePage() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     request('get', '/me')
@@ -808,6 +816,7 @@ function ProfilePage() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setSaving(true);
     try {
       const profileFields = [
         'name', 'phoneNumber', 'university', 'degree', 'location', 'bio', 'linkedinUrl',
@@ -815,10 +824,16 @@ function ProfilePage() {
       ];
       const payload = Object.fromEntries(profileFields.map((field) => [field, form[field] || '']));
       payload.graduationYear = form.graduationYear ? Number(form.graduationYear) : null;
-      await request('put', '/me', payload);
+      const response = await request('put', '/me', payload);
+      const updatedUser = { ...user, ...response.data };
+      localStorage.setItem('skilltracker-user', JSON.stringify(updatedUser));
+      onUserUpdated(updatedUser);
+      setForm((current) => ({ ...current, ...response.data }));
       setSuccess('Profile updated successfully.');
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Profile could not be saved.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -827,7 +842,7 @@ function ProfilePage() {
       {error && <p className="form-error" role="status">{error}</p>}
       {success && <p className="form-success" role="status">{success}</p>}
       <form onSubmit={save} className="form-grid">
-        <label>Name<input value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+        <label>Name<input value={form.name || ''} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={255} /></label>
         <label>Phone<input value={form.phoneNumber || ''} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} /></label>
         <label>University<input value={form.university || ''} onChange={(e) => setForm({ ...form, university: e.target.value })} /></label>
         <label>Degree<input value={form.degree || ''} onChange={(e) => setForm({ ...form, degree: e.target.value })} /></label>
@@ -841,7 +856,9 @@ function ProfilePage() {
         <label className="full-width">Certifications<textarea value={form.certifications || ''} onChange={(e) => setForm({ ...form, certifications: e.target.value })} rows={3} placeholder="One certification per line" /></label>
         <label className="full-width">Achievements<textarea value={form.achievements || ''} onChange={(e) => setForm({ ...form, achievements: e.target.value })} rows={3} /></label>
         <label className="full-width">Bio<textarea value={form.bio || ''} onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={5} /></label>
-        <button className="primary-btn full-width" type="submit">Save profile</button>
+        <button className="primary-btn full-width" type="submit" disabled={saving}>
+          {saving ? 'Saving...' : 'Save profile'}
+        </button>
       </form>
     </SectionCard>
   );
@@ -1021,6 +1038,7 @@ function EntityPage({ endpoint, title, fields, initialError = '' }) {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -1044,6 +1062,7 @@ function EntityPage({ endpoint, title, fields, initialError = '' }) {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    setSaving(true);
     const payload = Object.fromEntries(fields.map((field) => {
       const value = form[field.name];
       return [field.name, field.type === 'number' || field.name === 'companyId'
@@ -1057,10 +1076,13 @@ function EntityPage({ endpoint, title, fields, initialError = '' }) {
       await fetchData();
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'The record could not be saved.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const remove = async (id) => {
+    if (!window.confirm('Delete this record? This action cannot be undone.')) return;
     setError('');
     try {
       await request('delete', `${endpoint}/${id}`);
@@ -1110,7 +1132,9 @@ function EntityPage({ endpoint, title, fields, initialError = '' }) {
             )}
           </label>
         ))}
-        <button type="submit" className="primary-btn full-width">{editingId ? 'Save changes' : 'Add record'}</button>
+        <button type="submit" className="primary-btn full-width" disabled={saving}>
+          {saving ? 'Saving...' : editingId ? 'Save changes' : 'Add record'}
+        </button>
         {editingId && <button type="button" className="secondary-btn full-width" onClick={() => { setForm(newForm()); setEditingId(null); }}>Cancel editing</button>}
       </form>
 

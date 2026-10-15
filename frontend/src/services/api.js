@@ -21,7 +21,14 @@ export const authHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export const getUser = () => JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+export const getUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+  } catch {
+    clearSession();
+    return null;
+  }
+};
 
 export const setSession = (token, user) => {
   localStorage.setItem(TOKEN_KEY, token);

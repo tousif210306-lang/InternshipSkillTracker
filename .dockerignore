@@ -1,0 +1,12 @@
+.git
+**/.git
+**/node_modules
+**/dist
+**/target
+**/.env
+**/.env.*
+!**/.env.example
+database/
+frontend/
+README.md
+backend/.gitignore
