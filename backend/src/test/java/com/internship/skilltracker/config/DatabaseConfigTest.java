@@ -6,34 +6,39 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DatabaseConfigTest {
 
     @Test
-    public void testParseAivenServiceUri() {
-        String serviceUri = "mysql://sampleuser:samplepass123@mysql-b45954-intershipskilltracker.c.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED";
-        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse(serviceUri, "", "");
-
-        assertEquals("sampleuser", config.username);
-        assertEquals("samplepass123", config.password);
-        assertTrue(config.jdbcUrl.startsWith("jdbc:mysql://mysql-b45954-intershipskilltracker.c.aivencloud.com:25281/defaultdb"));
-        assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
-        assertTrue(config.jdbcUrl.contains("allowPublicKeyRetrieval=true"));
-    }
-
-    @Test
     public void testParseJdbcUrl() {
-        String jdbc = "jdbc:mysql://mysql-b45954-intershipskilltracker.c.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED";
-        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse(jdbc, "customUser", "customPass");
-
-        assertEquals("customUser", config.username);
-        assertEquals("customPass", config.password);
-        assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
-        assertTrue(config.jdbcUrl.contains("allowPublicKeyRetrieval=true"));
-    }
-
-    @Test
-    public void testFallbackWhenEmpty() {
-        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse("", "", "");
+        String jdbc = "jdbc:mysql://mysql-test.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED";
+        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse(jdbc, "avnadmin", "test-only-password");
 
         assertEquals("avnadmin", config.username);
-        assertTrue(config.jdbcUrl.contains("defaultdb"));
+        assertEquals("test-only-password", config.password);
         assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
+    }
+
+    @Test
+    public void testRequiresTlsWhenMissingFromJdbcUrl() {
+        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse(
+                "jdbc:mysql://mysql-test.aivencloud.com:25281/defaultdb", "avnadmin", "test-only-password");
+
+        assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
+    }
+
+    @Test
+    public void testRejectsAivenServiceUriWithEmbeddedCredentials() {
+        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
+                "mysql://user:password@mysql-test.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED",
+                "avnadmin", "test-only-password"));
+    }
+
+    @Test
+    public void testRejectsNonAivenHost() {
+        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
+                "jdbc:mysql://localhost:3306/defaultdb?sslMode=REQUIRED", "avnadmin", "test-only-password"));
+    }
+
+    @Test
+    public void testRejectsMissingCredentials() {
+        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
+                "jdbc:mysql://mysql-test.aivencloud.com:25281/defaultdb?sslMode=REQUIRED", "", ""));
     }
 }
