@@ -36,6 +36,7 @@ export function TopHeader({ user, onLogout, searchQuery, setSearchQuery }) {
 
           {menuOpen && (
             <div className="profile-dropdown">
+              <Link to="/about" onClick={() => setMenuOpen(false)}>Project Details</Link>
               <Link to="/profile" onClick={() => setMenuOpen(false)}>View profile</Link>
               <Link to="/profile" onClick={() => setMenuOpen(false)}>Settings</Link>
               <button type="button" onClick={() => { setMenuOpen(false); onLogout(); }}>

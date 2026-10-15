@@ -17,6 +17,7 @@ import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { StatCard } from './components/StatCard';
 import { SectionCard } from './components/SectionCard';
+import { LandingPage } from './LandingPage';
 
 function App() {
   const [user, setUser] = useState(getUser());
@@ -39,7 +40,9 @@ function App() {
       .catch(() => {
         clearSession();
         setUser(null);
-        if (location.pathname !== '/login') navigate('/login');
+        if (location.pathname !== '/login' && location.pathname !== '/register' && location.pathname !== '/' && location.pathname !== '/about') {
+          navigate('/login');
+        }
       })
       .finally(() => setLoading(false));
   }, [location.pathname, navigate]);
@@ -48,8 +51,10 @@ function App() {
 
   return (
     <Routes>
+      <Route path="/about" element={<LandingPage user={user} />} />
       <Route path="/login" element={<AuthPage mode="login" onAuth={(token, usr) => { setSession(token, usr); setUser(usr); navigate('/'); }} />} />
       <Route path="/register" element={<AuthPage mode="register" onAuth={(token, usr) => { setSession(token, usr); setUser(usr); navigate('/'); }} />} />
+      <Route path="/" element={user ? <DashboardShell user={user} onUserUpdated={setUser} onLogout={() => { clearSession(); setUser(null); navigate('/login'); }} /> : <LandingPage user={user} />} />
       <Route path="/*" element={user ? <DashboardShell user={user} onUserUpdated={setUser} onLogout={() => { clearSession(); setUser(null); navigate('/login'); }} /> : <Navigate to="/login" replace />} />
     </Routes>
   );
@@ -79,8 +84,8 @@ function AuthPage({ mode, onAuth }) {
     } catch (err) {
       const responseMessage = err?.response?.data?.message;
       setError(responseMessage || (err?.response
-        ? 'Authentication failed. Check your email and password and try again.'
-        : 'Cannot reach the InternshipSkillTracker API. Make sure the backend is running on port 8081.'));
+        ? 'Authentication failed. Please verify your email and password.'
+        : 'Cannot reach the InternshipSkillTracker API. If the free Render backend was asleep, please wait 20-30 seconds and try again.'));
     } finally {
       setBusy(false);
     }
@@ -89,6 +94,12 @@ function AuthPage({ mode, onAuth }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <div style={{ marginBottom: 16 }}>
+          <Link to="/" style={{ fontSize: '0.88rem', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+            ← Back to Project Details
+          </Link>
+        </div>
+
         <div className="auth-brand">
           <span className="brand-mark">ST</span>
           <div>
@@ -115,10 +126,28 @@ function AuthPage({ mode, onAuth }) {
             <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           </label>
 
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: -4 }}>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Quick testing?</span>
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ fontSize: '0.78rem', padding: '3px 8px' }}
+              onClick={() => {
+                setForm({
+                  name: mode === 'register' ? 'Demo Student' : '',
+                  email: 'demo.student@example.com',
+                  password: 'Password123!',
+                });
+              }}
+            >
+              Fill Sample Credentials
+            </button>
+          </div>
+
           {error && <div className="error-box">{error}</div>}
 
           <button type="submit" className="primary-btn" disabled={busy}>
-            {busy ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create account'}
+            {busy ? 'Connecting to Cloud API...' : mode === 'login' ? 'Login' : 'Create account'}
           </button>
         </form>
 
@@ -155,6 +184,7 @@ function DashboardShell({ user, onUserUpdated, onLogout }) {
           <Route path="/progress" element={<ProgressPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/admin" element={user.role === 'ADMIN' ? <AdminPage /> : <Navigate to="/" replace />} />
+          <Route path="/about" element={<LandingPage user={user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -58,15 +58,27 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .map(origin -> origin.replaceAll("/+$", ""))
-                .filter(origin -> !origin.isEmpty())
-                .toList());
-        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
-        configuration.setExposedHeaders(java.util.List.of("Authorization"));
-        configuration.setAllowCredentials(false);
+        java.util.List<String> patterns = new java.util.ArrayList<>();
+        patterns.add("https://*.vercel.app");
+        patterns.add("https://*.onrender.com");
+        patterns.add("http://localhost:*");
+        patterns.add("http://127.0.0.1:*");
+
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .map(origin -> origin.replaceAll("/+$", ""))
+                    .filter(origin -> !origin.isEmpty())
+                    .forEach(patterns::add);
+        }
+        patterns.add("*");
+
+        configuration.setAllowedOriginPatterns(patterns);
+        configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setExposedHeaders(java.util.List.of("Authorization", "Content-Type", "Content-Disposition"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { path: '/notifications', label: 'Notifications', icon: '🔔' },
   { path: '/activity', label: 'Activity History', icon: '🕒' },
   { path: '/profile', label: 'Profile / Settings', icon: '⚙️' },
+  { path: '/about', label: 'Project Details', icon: 'ℹ️' },
   { path: '/logout', label: 'Logout', icon: '🚪', isAction: true },
 ];
 
