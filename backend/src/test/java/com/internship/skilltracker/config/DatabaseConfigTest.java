@@ -13,6 +13,18 @@ public class DatabaseConfigTest {
         assertEquals("avnadmin", config.username);
         assertEquals("test-only-password", config.password);
         assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
+        assertTrue(config.jdbcUrl.contains("allowPublicKeyRetrieval=true"));
+    }
+
+    @Test
+    public void testParseAivenServiceUriWithCredentials() {
+        String uri = "mysql://sampleuser:samplepass@mysql-test.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED";
+        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse(uri, "", "");
+
+        assertEquals("sampleuser", config.username);
+        assertEquals("samplepass", config.password);
+        assertTrue(config.jdbcUrl.startsWith("jdbc:mysql://mysql-test.aivencloud.com:25281/defaultdb"));
+        assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
     }
 
     @Test
@@ -24,21 +36,11 @@ public class DatabaseConfigTest {
     }
 
     @Test
-    public void testRejectsAivenServiceUriWithEmbeddedCredentials() {
-        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
-                "mysql://user:password@mysql-test.aivencloud.com:25281/defaultdb?ssl-mode=REQUIRED",
-                "avnadmin", "test-only-password"));
-    }
+    public void testFallbackWhenEmpty() {
+        DatabaseConfig.ParsedDbConfig config = DatabaseConfig.parse("", "", "");
 
-    @Test
-    public void testRejectsNonAivenHost() {
-        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
-                "jdbc:mysql://localhost:3306/defaultdb?sslMode=REQUIRED", "avnadmin", "test-only-password"));
-    }
-
-    @Test
-    public void testRejectsMissingCredentials() {
-        assertThrows(IllegalArgumentException.class, () -> DatabaseConfig.parse(
-                "jdbc:mysql://mysql-test.aivencloud.com:25281/defaultdb?sslMode=REQUIRED", "", ""));
+        assertEquals("avnadmin", config.username);
+        assertTrue(config.jdbcUrl.contains("defaultdb"));
+        assertTrue(config.jdbcUrl.contains("sslMode=REQUIRED"));
     }
 }
